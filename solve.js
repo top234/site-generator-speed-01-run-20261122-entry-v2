@@ -1126,9 +1126,9 @@ function pathExpr(path, st) {
 function genNodes(nodes, st) {
   let code = '';
   for (const nd of nodes) {
-    if (nd.kind === 'text') code += `o+=${JSON.stringify(nd.text)};`;
-    else if (nd.kind === 'var') code += `o+=etx(${pathExpr(nd.path, st)});`;
-    else if (nd.kind === 'raw') code += `o+=tx(${pathExpr(nd.path, st)});`;
+    if (nd.kind === 'text') code += `o.push(${JSON.stringify(nd.text)});`;
+    else if (nd.kind === 'var') code += `o.push(etx(${pathExpr(nd.path, st)}));`;
+    else if (nd.kind === 'raw') code += `o.push(tx(${pathExpr(nd.path, st)}));`;
     else if (nd.kind === 'if') {
       const cond = nd.not ? `!ty(${pathExpr(nd.path, st)})` : `ty(${pathExpr(nd.path, st)})`;
       code += `if(${cond}){${genNodes(nd.then, st)}}`;
@@ -1152,7 +1152,7 @@ function genNodes(nodes, st) {
       code += `{const xs${u}=${pathExpr(nd.path, st)};if(Array.isArray(xs${u})){const L${u}=xs${u}.length;const pv${u}=E[${nm}],pl${u}=E.loop;const lo${u}=lp${u};lo${u}.length=L${u};E.loop=lo${u};for(let k${u}=0;k${u}<L${u};k${u}++){E[${nm}]=xs${u}[k${u}];lo${u}.index=k${u}+1;lo${u}.first=k${u}===0;lo${u}.last=k${u}===L${u}-1;${body}}E[${nm}]=pv${u};E.loop=pl${u};}}`;
     } else if (nd.kind === 'include') {
       const u = ++st.uid;
-      code += `if(D<${INCLUDE_DEPTH}){const f${u}=T.get(${JSON.stringify(nd.name)});if(f${u}!==void 0)o+=f${u}(V,E,D+1,T,esc,tx,ty,gp,etx);}`;
+      code += `if(D<${INCLUDE_DEPTH}){const f${u}=T.get(${JSON.stringify(nd.name)});if(f${u}!==void 0)o.push(f${u}(V,E,D+1,T,esc,tx,ty,gp,etx));}`;
     }
   }
   return code;
@@ -1164,7 +1164,9 @@ function compileTemplate(name, src) {
   const st = { uid: 0, stack: [], loops: [] };
   const body = genNodes(nodes, st);
   const decls = st.loops.map((u) => `const lp${u}={index:0,first:false,last:false,length:0};`).join('');
-  const code = `let o="",_t;${decls}${body}return o;`;
+  // Output assembled in an array and joined once: join() returns a flat
+  // string, so JSON.stringify downstream never pays to flatten a rope.
+  const code = `const o=[];let _t;${decls}${body}return o.join('');`;
   return new Function('V', 'E', 'D', 'T', 'esc', 'tx', 'ty', 'gp', 'etx', code);
 }
 
