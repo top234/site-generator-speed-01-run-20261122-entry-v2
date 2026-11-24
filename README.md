@@ -26,5 +26,10 @@ the output tree of the case's site — every page's `index.html`, the index and 
   loops see exactly the scope the dialect requires.
 - **Minimal allocation.** Cards are built directly from precomputed fields (word counts, excerpts);
   slugs and long dates are memoised within a single `run()` and never shared between cases.
+- **Profile-guided hotspots.** The inline scan jumps between specials with one native regex search
+  and finds span ends with `indexOf` plus a backslash-parity test; words are counted in a single
+  pass over the body; fence code is escaped in one call; escaping and link resolution are memoised
+  within one run; compiled loops hoist their save/restore out of the iteration, reuse one
+  loop-state object, never delete a binding, and inline their property walks.
 
 No WebAssembly, no native addon, no prebuilt binary — JavaScript source only, zero dependencies.
